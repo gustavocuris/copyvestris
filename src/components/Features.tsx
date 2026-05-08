@@ -55,8 +55,6 @@ const CARDS = [
   { icon: <IconMessage />,   title: 'Contato direto com o time',        desc: 'Comunicação direta com a equipe de desenvolvimento durante todo o processo.' },
   { icon: <IconBook />,      title: 'Base científica estruturada',      desc: 'Informações organizadas por espécie, doença e manejo com respaldo técnico.' },
   { icon: <IconZap />,       title: 'Acesso antes de todos',            desc: 'Você entra antes do lançamento público e experimenta o produto em primeira mão.' },
-  { icon: <IconShield />,    title: 'Condições especiais permanentes',  desc: 'Early adopters terão benefícios exclusivos quando o plano pago for lançado.' },
-  { icon: <IconClipboard />, title: 'Prontuário integrado',             desc: 'Registre e acompanhe o histórico clínico dos seus pacientes de forma organizada.' },
   { icon: <IconActivity />,  title: 'Dosagens e protocolos',            desc: 'Calcule doses por peso e espécie. Acesse protocolos clínicos por procedimento.' },
 ]
 
@@ -84,7 +82,7 @@ const Features = () => {
   return (
     <section className="value-section" id="features">
       <p className="section-eyebrow">Por que entrar agora</p>
-      <h2 className="section-title">O que você ganha como<br /><em>early adopter</em></h2>
+      <h2 className="section-title">Vantagens de quem<br /><em>entra desde o início</em></h2>
       <p className="section-desc">
         Quem entra agora não é apenas usuário. É parte da construção.
       </p>

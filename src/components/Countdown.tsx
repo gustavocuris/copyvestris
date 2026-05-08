@@ -23,7 +23,7 @@ const Countdown = () => {
       </div>
       <div className="countdown-digits">
         <div className="countdown-block">
-          <span className="countdown-num">01</span>
+          <span className="countdown-num">02</span>
           <span className="countdown-unit">dias</span>
         </div>
         <span className="countdown-sep">:</span>

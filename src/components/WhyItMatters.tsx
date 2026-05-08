@@ -49,7 +49,7 @@ const WhyItMatters = () => {
       <p className="section-eyebrow">Como funciona</p>
       <h2 className="section-title">O acesso antecipado<br /><em>em quatro etapas</em></h2>
       <p className="section-desc">
-        Você entra, utiliza o sistema antes de todos<br />e compartilha sua experiência com a equipe.
+        Você entra, utiliza o sistema antes de todos e compartilha sua experiência com a equipe.
       </p>
 
       <div className="how-steps">

@@ -27,7 +27,7 @@ function App() {
         <div className="cta-block">
           <p className="section-eyebrow">Lista de espera</p>
           <h2 className="section-title">
-            Participe da construção do<br /><em>primeiro sistema do Brasil</em>
+            Participe da construção do <em>primeiro sistema do Brasil</em>
           </h2>
           <p className="section-desc">
             Tenha acesso antecipado, influencie o desenvolvimento<br />e faça parte desde o início.

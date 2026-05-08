@@ -78,7 +78,14 @@ const EarlyAccessForm = ({ onClose }: Props) => {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
+    let { name, value } = e.target
+    if (name === 'whatsapp') {
+      const digits = value.replace(/\D/g, '').slice(0, 11)
+      if (digits.length <= 2) value = digits.length ? `(${digits}` : ''
+      else if (digits.length <= 7) value = `(${digits.slice(0,2)}) ${digits.slice(2)}`
+      else if (digits.length <= 10) value = `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`
+      else value = `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`
+    }
     setForm((prev) => ({ ...prev, [name]: value }))
     if (errors[name as keyof Errors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }))
@@ -185,7 +192,7 @@ const EarlyAccessForm = ({ onClose }: Props) => {
                     id="whatsapp"
                     name="whatsapp"
                     type="tel"
-                    placeholder="(11) 99999-9999"
+                    placeholder="(00) 00000-0000"
                     value={form.whatsapp}
                     onChange={handleChange}
                     className={errors.whatsapp ? 'error' : ''}
