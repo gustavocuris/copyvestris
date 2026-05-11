@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { Registration } from '../types'
 import Particles from './Particles'
 import { supabase } from '../lib/supabase'
 
