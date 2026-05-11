@@ -1,8 +1,22 @@
 import { useState } from 'react'
 import type { Registration } from '../types'
 import Particles from './Particles'
+import { supabase } from '../lib/supabase'
 
 const ADMIN_PASSWORD = 'vestris2026'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mapRow = (row: any): Registration => ({
+  id: row.id,
+  name: row.name,
+  whatsapp: row.whatsapp,
+  email: row.email,
+  professionalType: row.professional_type,
+  clinicName: row.clinic_name ?? undefined,
+  city: row.city ?? undefined,
+  interest: row.interest ?? undefined,
+  createdAt: new Date(row.created_at).toLocaleString('pt-BR'),
+})
 
 const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const [password, setPassword] = useState('')
@@ -10,13 +24,14 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const [passwordError, setPasswordError] = useState('')
   const [registrations, setRegistrations] = useState<Registration[]>([])
 
-  const handleAuth = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password === ADMIN_PASSWORD) {
-      const data: Registration[] = JSON.parse(
-        localStorage.getItem('vestris_registrations') || '[]'
-      )
-      setRegistrations(data)
+      const { data } = await supabase
+        .from('registrations')
+        .select('*')
+        .order('created_at', { ascending: false })
+      setRegistrations((data || []).map(mapRow))
       setAuthenticated(true)
     } else {
       setPasswordError('Senha incorreta. Tente novamente.')
@@ -24,17 +39,17 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
     }
   }
 
-  const handleDelete = (id: string) => {
-    const updated = registrations.filter((r) => r.id !== id)
-    localStorage.setItem('vestris_registrations', JSON.stringify(updated))
-    setRegistrations(updated)
+  const handleDelete = async (id: string) => {
+    await supabase.from('registrations').delete().eq('id', id)
+    setRegistrations((prev) => prev.filter((r) => r.id !== id))
   }
 
-  const handleRefresh = () => {
-    const data: Registration[] = JSON.parse(
-      localStorage.getItem('vestris_registrations') || '[]'
-    )
-    setRegistrations(data)
+  const handleRefresh = async () => {
+    const { data } = await supabase
+      .from('registrations')
+      .select('*')
+      .order('created_at', { ascending: false })
+    setRegistrations((data || []).map(mapRow))
   }
 
   return (

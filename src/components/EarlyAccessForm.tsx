@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Registration } from '../types'
 import Particles from './Particles'
+import { supabase } from '../lib/supabase'
 
 interface Props {
   onClose: () => void
@@ -93,33 +94,26 @@ const EarlyAccessForm = ({ onClose }: Props) => {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate()) return
 
     setLoading(true)
-    setTimeout(() => {
-      const registration: Registration = {
-        id: crypto.randomUUID(),
-        name: form.name.trim(),
-        whatsapp: form.whatsapp.trim(),
-        email: form.email.trim(),
-        professionalType: form.professionalType,
-        clinicName: showClinicField ? form.clinicName.trim() : undefined,
-        city: form.city.trim() || undefined,
-        interest: form.interest || undefined,
-        createdAt: new Date().toLocaleString('pt-BR'),
-      }
-
-      const existing: Registration[] = JSON.parse(
-        localStorage.getItem('vestris_registrations') || '[]'
-      )
-      existing.push(registration)
-      localStorage.setItem('vestris_registrations', JSON.stringify(existing))
-
-      setLoading(false)
+    const { error } = await supabase.from('registrations').insert({
+      name: form.name.trim(),
+      whatsapp: form.whatsapp.trim(),
+      email: form.email.trim(),
+      professional_type: form.professionalType,
+      clinic_name: showClinicField ? form.clinicName.trim() || null : null,
+      city: form.city.trim() || null,
+      interest: form.interest || null,
+    })
+    setLoading(false)
+    if (!error) {
       setSubmitted(true)
-    }, 800)
+    } else {
+      alert('Erro ao salvar cadastro. Tente novamente.')
+    }
   }
 
   return (
