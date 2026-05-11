@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Registration } from '../types'
+import Particles from './Particles'
 
 const ADMIN_PASSWORD = 'vestris2026'
 
@@ -23,11 +24,10 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
     }
   }
 
-  const handleClear = () => {
-    if (window.confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
-      localStorage.removeItem('vestris_registrations')
-      setRegistrations([])
-    }
+  const handleDelete = (id: string) => {
+    const updated = registrations.filter((r) => r.id !== id)
+    localStorage.setItem('vestris_registrations', JSON.stringify(updated))
+    setRegistrations(updated)
   }
 
   const handleRefresh = () => {
@@ -40,10 +40,11 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label="Área administrativa">
+        <Particles />
         <button className="modal-close" onClick={onClose} aria-label="Fechar">✕</button>
 
         {!authenticated ? (
-          <>
+          <div style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center'}}>
             <h2>Área Administrativa</h2>
             <p className="modal-subtitle">Acesso restrito. Informe a senha para continuar.</p>
 
@@ -64,7 +65,7 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
               {passwordError && <p className="password-error">{passwordError}</p>}
               <button type="submit" className="btn-green">Entrar</button>
             </form>
-          </>
+          </div>
         ) : (
           <>
             <h2>
@@ -75,9 +76,6 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
 
             <div className="modal-actions">
               <button className="btn-green" onClick={handleRefresh}>↻ Atualizar</button>
-              {registrations.length > 0 && (
-                <button className="btn-danger" onClick={handleClear}>🗑 Limpar lista</button>
-              )}
             </div>
 
             {registrations.length === 0 ? (
@@ -98,6 +96,7 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                       <th>Cidade</th>
                       <th>Interesse</th>
                       <th>Cadastrado em</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -112,6 +111,16 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                         <td>{reg.city || '—'}</td>
                         <td>{reg.interest || '—'}</td>
                         <td>{reg.createdAt}</td>
+                        <td>
+                          <button className="btn-delete-row" onClick={() => handleDelete(reg.id)} title="Excluir">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"/>
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                              <path d="M10 11v6M14 11v6"/>
+                              <path d="M9 6V4h6v2"/>
+                            </svg>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

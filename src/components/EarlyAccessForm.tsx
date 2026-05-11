@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Registration } from '../types'
+import Particles from './Particles'
 
 interface Props {
   onClose: () => void
@@ -123,6 +124,7 @@ const EarlyAccessForm = ({ onClose }: Props) => {
 
   return (
     <div className="form-screen">
+      <Particles />
       <nav className="form-screen-nav">
         <div className="form-screen-logo">VEST<span>RIS</span></div>
         <button className="form-screen-close" onClick={onClose}>

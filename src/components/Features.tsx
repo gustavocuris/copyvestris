@@ -82,7 +82,7 @@ const Features = () => {
   return (
     <section className="value-section" id="features">
       <p className="section-eyebrow">Por que entrar agora</p>
-      <h2 className="section-title">Vantagens de quem<br /><em>entra desde o início</em></h2>
+      <h2 className="section-title">Vantagens de quem <em>entra desde o início</em></h2>
       <p className="section-desc">
         Quem entra agora não é apenas usuário. É parte da construção.
       </p>
