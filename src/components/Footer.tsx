@@ -1,8 +1,28 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AdminArea from './AdminArea'
 
 const Footer = () => {
-  const [showAdmin, setShowAdmin] = useState(false)
+  const [showAdmin, setShowAdmin] = useState(() => window.location.hash === '#acesso')
+
+  const openAdmin = () => {
+    window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#acesso`)
+    setShowAdmin(true)
+  }
+
+  const closeAdmin = () => {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    setShowAdmin(false)
+  }
+
+  useEffect(() => {
+    const syncAccessWithUrl = () => setShowAdmin(window.location.hash === '#acesso')
+    window.addEventListener('popstate', syncAccessWithUrl)
+    window.addEventListener('hashchange', syncAccessWithUrl)
+    return () => {
+      window.removeEventListener('popstate', syncAccessWithUrl)
+      window.removeEventListener('hashchange', syncAccessWithUrl)
+    }
+  }, [])
 
   return (
     <>
@@ -25,12 +45,12 @@ const Footer = () => {
           <a href="https://wa.me/5511939214936" target="_blank" rel="noopener noreferrer">WhatsApp: (11) 93921-4936</a>
         </div>
         <p className="footer-copy">© {new Date().getFullYear()} VESTRIS. Todos os direitos reservados.</p>
-        <button className="footer-admin-btn" onClick={() => setShowAdmin(true)}>
+        <button className="footer-admin-btn" onClick={openAdmin}>
           Ver lista
         </button>
       </footer>
 
-      {showAdmin && <AdminArea onClose={() => setShowAdmin(false)} />}
+      {showAdmin && <AdminArea onClose={closeAdmin} />}
     </>
   )
 }

@@ -1339,6 +1339,7 @@ body {
   background: rgba(239,154,154,0.10);
   color: #efb0b0;
 }
+.admin-mobile-nav { display: none; }
 
 /* ── ANIMATIONS ──────────────────────────── */
 @keyframes fadeInDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
@@ -1424,7 +1425,10 @@ body {
   .partner-create-fields label:first-child { grid-column: auto; }
   .partner-create-head .btn-green { width: 100%; }
   .partner-account-actions button { flex-basis: calc(50% - 0.4rem); }
-  .admin-workspace { padding: 1.2rem 0.8rem; }
+  .admin-workspace {
+    padding: 1.2rem 0.8rem calc(5.25rem + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
   .admin-header-actions { width: 100%; }
   .admin-header-actions button { flex: 1; }
   .admin-metrics { gap: 0.55rem; }
@@ -1438,7 +1442,51 @@ body {
   .partner-share-box strong { white-space: normal; overflow-wrap: anywhere; }
   .admin-list-toolbar { align-items: stretch; flex-direction: column; }
   .admin-list-toolbar select { width: 100%; min-width: 0; }
+  .admin-workspace .admin-table-wrap {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
   .admin-workspace .admin-table { min-width: 920px; }
+  .admin-mobile-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1200;
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.6rem max(0.65rem, env(safe-area-inset-right))
+      calc(0.6rem + env(safe-area-inset-bottom))
+      max(0.65rem, env(safe-area-inset-left));
+    border-top: 1px solid rgba(139,195,74,0.22);
+    background: rgba(5, 31, 14, 0.97);
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.24);
+    backdrop-filter: blur(14px);
+  }
+  .admin-mobile-nav button {
+    min-width: 0;
+    min-height: 46px;
+    flex: 1;
+    padding: 0.45rem 0.35rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: rgba(255,255,255,0.62);
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .admin-mobile-nav button.active {
+    border-color: rgba(139,195,74,0.3);
+    background: rgba(139,195,74,0.14);
+    color: #d2edbf;
+  }
+  .admin-mobile-nav .admin-mobile-exit {
+    border-color: rgba(239,154,154,0.2);
+    color: #efb0b0;
+  }
 
   .footer { padding: 2rem 1.2rem; font-size: 0.78rem; }
   .footer-links {

@@ -257,6 +257,13 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
     }, 80)
   }
 
+  const changeAdminView = (view: AdminView) => {
+    setAdminView(view)
+    window.setTimeout(() => {
+      document.querySelector('.admin-workspace')?.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 0)
+  }
+
   const handleDelete = async (id: string) => {
     await supabase.from('registrations').delete().eq('id', id)
     setRegistrations((current) => current.filter((registration) => registration.id !== id))
@@ -395,9 +402,9 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
 
             {isAdmin && (
               <nav className="admin-tabs" aria-label="Navegação administrativa">
-                <button className={adminView === 'overview' ? 'active' : ''} onClick={() => setAdminView('overview')}>Visão geral</button>
-                <button className={adminView === 'registrations' ? 'active' : ''} onClick={() => setAdminView('registrations')}>Cadastros</button>
-                <button className={adminView === 'partners' ? 'active' : ''} onClick={() => setAdminView('partners')}>Parceiros <span>{partners.length}</span></button>
+                <button className={adminView === 'overview' ? 'active' : ''} onClick={() => changeAdminView('overview')}>Visão geral</button>
+                <button className={adminView === 'registrations' ? 'active' : ''} onClick={() => changeAdminView('registrations')}>Cadastros</button>
+                <button className={adminView === 'partners' ? 'active' : ''} onClick={() => changeAdminView('partners')}>Parceiros <span>{partners.length}</span></button>
               </nav>
             )}
 
@@ -498,6 +505,22 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                 )}
               </section>
             )}
+
+            <nav className="admin-mobile-nav" aria-label="Navegação móvel do painel">
+              {isAdmin ? (
+                <>
+                  <button className={adminView === 'overview' ? 'active' : ''} onClick={() => changeAdminView('overview')}>Início</button>
+                  <button className={adminView === 'registrations' ? 'active' : ''} onClick={() => changeAdminView('registrations')}>Cadastros</button>
+                  <button className={adminView === 'partners' ? 'active' : ''} onClick={() => changeAdminView('partners')}>Parceiros</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => document.querySelector('.admin-workspace')?.scrollTo({ top: 0, behavior: 'smooth' })}>Início</button>
+                  <button onClick={openList}>Cadastros</button>
+                </>
+              )}
+              <button className="admin-mobile-exit" onClick={onClose}>Sair</button>
+            </nav>
           </>
         )}
       </div>
