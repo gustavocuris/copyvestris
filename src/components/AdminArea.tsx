@@ -1,9 +1,35 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { Registration } from '../types'
-import Particles from './Particles'
 import { supabase } from '../lib/supabase'
 
-const ADMIN_PASSWORD = 'vestris2026'
+const ADMIN_FALLBACK_PASSWORD = 'vestris2026'
+type AccessAccount = 'admin' | 'partner'
+type AdminView = 'overview' | 'registrations' | 'partners'
+
+interface PartnerAccount {
+  id: string
+  displayName: string
+  referralSource: string
+  active: boolean
+  registrationsCount: number
+}
+
+interface AccessPayload {
+  authorized?: boolean
+  account?: {
+    display_name?: string
+    role?: 'admin' | 'partner'
+    referral_source?: string | null
+  }
+  registrations?: unknown[]
+  partners?: Array<{
+    id: string
+    display_name: string
+    referral_source: string
+    active: boolean
+    registrations_count: number
+  }>
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapRow = (row: any): Registration => ({
@@ -16,61 +42,319 @@ const mapRow = (row: any): Registration => ({
   city: row.city ?? undefined,
   interest: row.interest ?? undefined,
   createdAt: new Date(row.created_at).toLocaleString('pt-BR'),
+  createdAtRaw: row.created_at,
+  referralSource: row.referral_source ?? undefined,
 })
+
+const normalizeSource = (value: string) => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+
+const startOfDay = (date: Date) => {
+  const result = new Date(date)
+  result.setHours(0, 0, 0, 0)
+  return result
+}
+
+const ScrollableTable = ({ children }: { children: React.ReactNode }) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef({ active: false, startX: 0, scrollLeft: 0 })
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return
+    const target = event.target as HTMLElement
+    if (target.closest('button, a, input, select')) return
+    const container = containerRef.current
+    if (!container) return
+    dragRef.current = {
+      active: true,
+      startX: event.clientX,
+      scrollLeft: container.scrollLeft,
+    }
+    container.setPointerCapture(event.pointerId)
+    container.classList.add('dragging')
+  }
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = containerRef.current
+    if (!container || !dragRef.current.active) return
+    container.scrollLeft = dragRef.current.scrollLeft - (event.clientX - dragRef.current.startX)
+  }
+
+  const stopDragging = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = containerRef.current
+    dragRef.current.active = false
+    container?.classList.remove('dragging')
+    if (container?.hasPointerCapture(event.pointerId)) container.releasePointerCapture(event.pointerId)
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="admin-table-wrap"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={stopDragging}
+      onPointerCancel={stopDragging}
+      onPointerLeave={(event) => dragRef.current.active && stopDragging(event)}
+    >
+      {children}
+    </div>
+  )
+}
 
 const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const [password, setPassword] = useState('')
   const [authenticated, setAuthenticated] = useState(false)
   const [passwordError, setPasswordError] = useState('')
   const [registrations, setRegistrations] = useState<Registration[]>([])
+  const [partners, setPartners] = useState<PartnerAccount[]>([])
+  const [account, setAccount] = useState<AccessAccount>('admin')
+  const [accountName, setAccountName] = useState('VESTRIS')
+  const [accountSource, setAccountSource] = useState('')
+  const [adminView, setAdminView] = useState<AdminView>('overview')
+  const [selectedSource, setSelectedSource] = useState('all')
+  const [linkCopied, setLinkCopied] = useState('')
+  const [partnerForm, setPartnerForm] = useState({ displayName: '', referralSource: '', password: '' })
+  const [partnerMessage, setPartnerMessage] = useState('')
+  const [savingPartner, setSavingPartner] = useState(false)
+  const [databaseConfigured, setDatabaseConfigured] = useState(true)
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (password === ADMIN_PASSWORD) {
-      const { data } = await supabase
-        .from('registrations')
-        .select('*')
-        .order('created_at', { ascending: false })
-      setRegistrations((data || []).map(mapRow))
-      setAuthenticated(true)
-    } else {
-      setPasswordError('Senha incorreta. Tente novamente.')
-      setPassword('')
+  const applyPayload = (payload: AccessPayload) => {
+    const accessAccount: AccessAccount = payload.account?.role === 'partner' ? 'partner' : 'admin'
+    setAccount(accessAccount)
+    setAccountName(payload.account?.display_name || 'VESTRIS')
+    setAccountSource(payload.account?.referral_source || '')
+    setRegistrations((payload.registrations || []).map(mapRow))
+    setPartners((payload.partners || []).map((partner) => ({
+      id: partner.id,
+      displayName: partner.display_name,
+      referralSource: partner.referral_source,
+      active: partner.active,
+      registrationsCount: Number(partner.registrations_count || 0),
+    })))
+    if (accessAccount === 'partner') setSelectedSource(payload.account?.referral_source || '')
+  }
+
+  const fetchDashboard = async (credential = password) => {
+    const { data, error } = await supabase.rpc('get_access_dashboard', { p_password: credential })
+    const payload = data as AccessPayload | null
+
+    if (error) {
+      if (credential !== ADMIN_FALLBACK_PASSWORD) {
+        setPasswordError('Os logins de parceiros ainda precisam ser configurados no banco de dados.')
+        return false
+      }
+      const fallback = await supabase.from('registrations').select('*').order('created_at', { ascending: false })
+      if (fallback.error) {
+        setPasswordError('Não foi possível acessar os cadastros.')
+        return false
+      }
+      setAccount('admin')
+      setAccountName('VESTRIS')
+      setRegistrations((fallback.data || []).map(mapRow))
+      setPartners([])
+      setDatabaseConfigured(false)
+      return true
     }
+    if (!payload?.authorized) {
+      setPasswordError('Senha incorreta. Tente novamente.')
+      return false
+    }
+
+    setDatabaseConfigured(true)
+    applyPayload(payload)
+    return true
+  }
+
+  const handleAuth = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (await fetchDashboard(password)) setAuthenticated(true)
+  }
+
+  const sourceOptions = useMemo(() => [
+    { source: 'all', label: 'Todos', count: registrations.length },
+    {
+      source: 'vestris',
+      label: 'VESTRIS',
+      count: registrations.filter((item) => !item.referralSource).length,
+    },
+    ...partners.map((partner) => ({
+      source: partner.referralSource,
+      label: partner.displayName,
+      count: registrations.filter((item) => item.referralSource === partner.referralSource).length,
+    })),
+  ], [partners, registrations])
+
+  const displayedRegistrations = useMemo(() => {
+    if (account === 'partner') return registrations
+    if (selectedSource === 'all') return registrations
+    if (selectedSource === 'vestris') return registrations.filter((item) => !item.referralSource)
+    return registrations.filter((item) => item.referralSource === selectedSource)
+  }, [account, registrations, selectedSource])
+
+  const metrics = useMemo(() => {
+    const today = startOfDay(new Date())
+    const sevenDaysAgo = new Date(today)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+    const todayCount = displayedRegistrations.filter((item) => new Date(item.createdAtRaw) >= today).length
+    const weekCount = displayedRegistrations.filter((item) => new Date(item.createdAtRaw) >= sevenDaysAgo).length
+    const completeCount = displayedRegistrations.filter((item) => item.city && item.interest).length
+    return {
+      total: displayedRegistrations.length,
+      today: todayCount,
+      week: weekCount,
+      complete: displayedRegistrations.length
+        ? Math.round((completeCount / displayedRegistrations.length) * 100)
+        : 0,
+    }
+  }, [displayedRegistrations])
+
+  const weeklyData = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' })
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = startOfDay(new Date())
+      date.setDate(date.getDate() - (6 - index))
+      const nextDay = new Date(date)
+      nextDay.setDate(nextDay.getDate() + 1)
+      return {
+        label: formatter.format(date).replace('.', ''),
+        count: displayedRegistrations.filter((item) => {
+          const createdAt = new Date(item.createdAtRaw)
+          return createdAt >= date && createdAt < nextDay
+        }).length,
+      }
+    })
+  }, [displayedRegistrations])
+
+  const maxWeekly = Math.max(...weeklyData.map((item) => item.count), 1)
+  const selectedLabel = sourceOptions.find((item) => item.source === selectedSource)?.label || accountName
+  const referralLink = accountSource
+    ? `${window.location.origin}${window.location.pathname}?ref=${accountSource}`
+    : ''
+
+  const copyReferralLink = async (source: string) => {
+    const link = `${window.location.origin}${window.location.pathname}?ref=${source}`
+    await navigator.clipboard.writeText(link)
+    setLinkCopied(source)
+    window.setTimeout(() => setLinkCopied(''), 1800)
+  }
+
+  const openSource = (source: string) => {
+    setSelectedSource(source)
+    setAdminView('registrations')
+  }
+
+  const openList = () => {
+    if (isAdmin) {
+      setAdminView('registrations')
+    }
+    window.setTimeout(() => {
+      document.getElementById('access-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
   }
 
   const handleDelete = async (id: string) => {
     await supabase.from('registrations').delete().eq('id', id)
-    setRegistrations((prev) => prev.filter((r) => r.id !== id))
+    setRegistrations((current) => current.filter((registration) => registration.id !== id))
   }
 
-  const handleRefresh = async () => {
-    const { data } = await supabase
-      .from('registrations')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setRegistrations((data || []).map(mapRow))
+  const savePartner = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const referralSource = normalizeSource(partnerForm.referralSource || partnerForm.displayName)
+    if (!partnerForm.displayName.trim() || !referralSource || partnerForm.password.length < 6) {
+      setPartnerMessage('Preencha o nome, o código do link e uma senha com pelo menos 6 caracteres.')
+      return
+    }
+    setSavingPartner(true)
+    setPartnerMessage('')
+    const { data, error } = await supabase.rpc('admin_save_partner', {
+      p_admin_password: password,
+      p_display_name: partnerForm.displayName.trim(),
+      p_referral_source: referralSource,
+      p_partner_password: partnerForm.password,
+    })
+    if (error || data !== true) {
+      setPartnerMessage('Não foi possível cadastrar. Verifique se o código do link já está em uso.')
+    } else {
+      setPartnerMessage('Parceiro cadastrado com sucesso.')
+      setPartnerForm({ displayName: '', referralSource: '', password: '' })
+      await fetchDashboard(password)
+    }
+    setSavingPartner(false)
   }
+
+  const togglePartner = async (partner: PartnerAccount) => {
+    const { data, error } = await supabase.rpc('admin_toggle_partner', {
+      p_admin_password: password,
+      p_referral_source: partner.referralSource,
+      p_active: !partner.active,
+    })
+    if (!error && data === true) await fetchDashboard(password)
+  }
+
+  const isAdmin = account === 'admin'
+
+  const renderDashboard = () => (
+    <>
+      <section className="admin-metrics">
+        <article className="admin-metric primary"><span>Total de acessos</span><strong>{metrics.total}</strong><small>{selectedLabel}</small></article>
+        <article className="admin-metric"><span>Hoje</span><strong>{metrics.today}</strong><small>novos cadastros</small></article>
+        <article className="admin-metric"><span>Últimos 7 dias</span><strong>{metrics.week}</strong><small>novos contatos</small></article>
+        <article className="admin-metric"><span>Perfis completos</span><strong>{metrics.complete}%</strong><small>cidade e interesse</small></article>
+      </section>
+
+      <section className="admin-dashboard-grid">
+        <article className="admin-chart-panel">
+          <div className="admin-section-heading">
+            <div><span>Movimento da lista</span><h3>Cadastros por dia</h3></div>
+            <strong>{metrics.week} na semana</strong>
+          </div>
+          <div className="admin-week-chart">
+            {weeklyData.map((item) => (
+              <div className="admin-week-column" key={item.label}>
+                <b>{item.count}</b>
+                <div className="admin-week-track">
+                  <i style={{ height: `${Math.max((item.count / maxWeekly) * 100, item.count ? 10 : 2)}%` }} />
+                </div>
+                <small>{item.label}</small>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="admin-source-panel">
+          <div className="admin-section-heading"><div><span>Distribuição</span><h3>Acessos por origem</h3></div></div>
+          <div className="admin-source-list">
+            {sourceOptions.filter((item) => item.source !== 'all').map((item) => (
+              <button key={item.source} onClick={() => openSource(item.source)}>
+                <span>{item.label}</span><strong>{item.count}</strong>
+              </button>
+            ))}
+          </div>
+        </article>
+      </section>
+    </>
+  )
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Área administrativa">
-        <Particles />
-        <button className="modal-close" onClick={onClose} aria-label="Fechar">✕</button>
+    <div className="modal-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="modal admin-workspace" role="dialog" aria-modal="true" aria-label="Área administrativa">
+        <button className="modal-close" onClick={onClose} aria-label="Fechar">×</button>
 
         {!authenticated ? (
-          <div style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center'}}>
-            <h2>Área Administrativa</h2>
-            <p className="modal-subtitle">Acesso restrito. Informe a senha para continuar.</p>
-
+          <div className="admin-login-shell">
             <form onSubmit={handleAuth} className="password-form">
               <label htmlFor="admin-password">Senha de acesso</label>
               <input
                 id="admin-password"
                 type="password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
+                onChange={(event) => {
+                  setPassword(event.target.value)
                   setPasswordError('')
                 }}
                 placeholder="••••••••••"
@@ -83,64 +367,136 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
           </div>
         ) : (
           <>
-            <h2>
-              Lista de Acesso Antecipado
-              <span className="admin-count">{registrations.length} cadastro{registrations.length !== 1 ? 's' : ''}</span>
-            </h2>
-            <p className="modal-subtitle">Todos os cadastros realizados na página.</p>
-
-            <div className="modal-actions">
-              <button className="btn-green" onClick={handleRefresh}>↻ Atualizar</button>
-            </div>
-
-            {registrations.length === 0 ? (
-              <div className="empty-state">
-                <p>Nenhum cadastro encontrado ainda.</p>
+            <header className="admin-page-header">
+              <div>
+                <span className="admin-eyebrow">{isAdmin ? 'Painel administrativo' : 'Painel do parceiro'}</span>
+                <h2>{accountName}</h2>
+                <p className="modal-subtitle">Lista de acesso antecipado VESTRIS</p>
               </div>
-            ) : (
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Nome</th>
-                      <th>WhatsApp</th>
-                      <th>E-mail</th>
-                      <th>Tipo</th>
-                      <th>Clínica / Hospital</th>
-                      <th>Cidade</th>
-                      <th>Interesse</th>
-                      <th>Cadastrado em</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registrations.map((reg, idx) => (
-                      <tr key={reg.id}>
-                        <td>{idx + 1}</td>
-                        <td>{reg.name}</td>
-                        <td>{reg.whatsapp}</td>
-                        <td>{reg.email}</td>
-                        <td>{reg.professionalType}</td>
-                        <td>{reg.clinicName || '—'}</td>
-                        <td>{reg.city || '—'}</td>
-                        <td>{reg.interest || '—'}</td>
-                        <td>{reg.createdAt}</td>
-                        <td>
-                          <button className="btn-delete-row" onClick={() => handleDelete(reg.id)} title="Excluir">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"/>
-                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                              <path d="M10 11v6M14 11v6"/>
-                              <path d="M9 6V4h6v2"/>
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="admin-header-actions">
+                <button className="btn-green" onClick={openList}>Ver lista</button>
+                <button className="btn-green" onClick={() => fetchDashboard(password)}>Atualizar</button>
+                <button className="btn-danger" onClick={onClose}>Sair</button>
               </div>
+            </header>
+
+            {!isAdmin && (
+              <section className="partner-share-box">
+                <div>
+                  <span>Seu link de divulgação</span>
+                  <strong>{referralLink}</strong>
+                  <small>Todo cadastro feito por este endereço aparecerá somente na sua lista.</small>
+                </div>
+                <button className="btn-green" onClick={() => copyReferralLink(accountSource)}>
+                  {linkCopied === accountSource ? 'Link copiado!' : 'Copiar link'}
+                </button>
+              </section>
+            )}
+
+            {isAdmin && (
+              <nav className="admin-tabs" aria-label="Navegação administrativa">
+                <button className={adminView === 'overview' ? 'active' : ''} onClick={() => setAdminView('overview')}>Visão geral</button>
+                <button className={adminView === 'registrations' ? 'active' : ''} onClick={() => setAdminView('registrations')}>Cadastros</button>
+                <button className={adminView === 'partners' ? 'active' : ''} onClick={() => setAdminView('partners')}>Parceiros <span>{partners.length}</span></button>
+              </nav>
+            )}
+
+            {(!isAdmin || adminView === 'overview') && renderDashboard()}
+
+            {isAdmin && adminView === 'partners' && (
+              <div className="partner-management">
+                {!databaseConfigured && (
+                  <div className="admin-database-warning">
+                    Execute <strong>supabase-partners.sql</strong> no Supabase para liberar contas, senhas e links.
+                  </div>
+                )}
+                <form className="partner-create-form" onSubmit={savePartner}>
+                  <div className="partner-create-head">
+                    <div><h3>Novo parceiro</h3><p>Crie o acesso e o link exclusivo de divulgação.</p></div>
+                    <button className="btn-green" type="submit" disabled={savingPartner || !databaseConfigured}>
+                      {savingPartner ? 'Salvando...' : 'Cadastrar'}
+                    </button>
+                  </div>
+                  <div className="partner-create-fields">
+                    <label>Nome da conta<input value={partnerForm.displayName} onChange={(event) => setPartnerForm((current) => ({ ...current, displayName: event.target.value, referralSource: current.referralSource || normalizeSource(event.target.value) }))} placeholder="Ex: Dra. Ana Souza" /></label>
+                    <label>Código do link<input value={partnerForm.referralSource} onChange={(event) => setPartnerForm((current) => ({ ...current, referralSource: normalizeSource(event.target.value) }))} placeholder="Ex: ana-souza" /></label>
+                    <label>Senha inicial<input type="password" value={partnerForm.password} onChange={(event) => setPartnerForm((current) => ({ ...current, password: event.target.value }))} placeholder="Mínimo 6 caracteres" /></label>
+                  </div>
+                  {partnerMessage && <p className="partner-form-message">{partnerMessage}</p>}
+                </form>
+
+                <div className="partner-account-grid">
+                  {partners.map((partner) => {
+                    const partnerUrl = `${window.location.origin}${window.location.pathname}?ref=${partner.referralSource}`
+                    return (
+                      <article className="partner-account-card" key={partner.id}>
+                        <div className="partner-account-top">
+                          <div><span className={`partner-status ${partner.active ? 'active' : 'inactive'}`}>{partner.active ? 'Ativa' : 'Inativa'}</span><h3>{partner.displayName}</h3></div>
+                          <strong>{partner.registrationsCount}</strong>
+                        </div>
+                        <div className="partner-card-link">{partnerUrl}</div>
+                        <p>{partner.registrationsCount === 1 ? 'cadastro captado' : 'cadastros captados'}</p>
+                        <div className="partner-account-actions">
+                          <button className="btn-green" onClick={() => openSource(partner.referralSource)}>Ver lista</button>
+                          <button className="btn-green" onClick={() => copyReferralLink(partner.referralSource)}>{linkCopied === partner.referralSource ? 'Copiado!' : 'Copiar link'}</button>
+                          <button className={partner.active ? 'btn-danger' : 'btn-green'} onClick={() => togglePartner(partner)}>{partner.active ? 'Desativar' : 'Ativar'}</button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                  {partners.length === 0 && <div className="empty-state">Nenhuma conta parceira cadastrada.</div>}
+                </div>
+              </div>
+            )}
+
+            {(isAdmin && adminView === 'registrations') && (
+              <section className="admin-registration-section" id="access-list">
+                <div className="admin-list-toolbar">
+                  <div>
+                    <span>Visualizando</span>
+                    <h3>{selectedLabel}</h3>
+                  </div>
+                  <select value={selectedSource} onChange={(event) => setSelectedSource(event.target.value)}>
+                    {sourceOptions.map((option) => <option key={option.source} value={option.source}>{option.label} ({option.count})</option>)}
+                  </select>
+                </div>
+                <div className="admin-list-summary">
+                  <span>{displayedRegistrations.length}</span>
+                  <p>{displayedRegistrations.length === 1 ? 'pessoa cadastrada' : 'pessoas cadastradas'} em {selectedLabel}</p>
+                </div>
+                {displayedRegistrations.length === 0 ? (
+                  <div className="empty-state">Nenhum cadastro encontrado ainda.</div>
+                ) : (
+                  <ScrollableTable>
+                    <table className="admin-table">
+                      <thead><tr><th>#</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Tipo</th><th>Clínica</th><th>Cidade</th><th>Interesse</th><th>Origem</th><th>Cadastro</th><th></th></tr></thead>
+                      <tbody>
+                        {displayedRegistrations.map((registration, index) => (
+                          <tr key={registration.id}>
+                            <td>{index + 1}</td><td>{registration.name}</td><td>{registration.whatsapp}</td><td>{registration.email}</td><td>{registration.professionalType}</td><td>{registration.clinicName || '—'}</td><td>{registration.city || '—'}</td><td>{registration.interest || '—'}</td>
+                            <td>{partners.find((item) => item.referralSource === registration.referralSource)?.displayName || 'VESTRIS'}</td>
+                            <td>{registration.createdAt}</td><td><button className="btn-delete-row" onClick={() => handleDelete(registration.id)} title="Excluir">×</button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollableTable>
+                )}
+              </section>
+            )}
+
+            {!isAdmin && (
+              <section className="admin-registration-section partner-own-list" id="access-list">
+                <div className="admin-section-heading"><div><span>Seus contatos</span><h3>Lista completa</h3></div><strong>{registrations.length}</strong></div>
+                {registrations.length === 0 ? <div className="empty-state">Nenhum cadastro pelo seu link ainda.</div> : (
+                  <ScrollableTable>
+                    <table className="admin-table">
+                      <thead><tr><th>#</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Tipo</th><th>Cidade</th><th>Interesse</th><th>Cadastro</th></tr></thead>
+                      <tbody>{registrations.map((registration, index) => <tr key={registration.id}><td>{index + 1}</td><td>{registration.name}</td><td>{registration.whatsapp}</td><td>{registration.email}</td><td>{registration.professionalType}</td><td>{registration.city || '—'}</td><td>{registration.interest || '—'}</td><td>{registration.createdAt}</td></tr>)}</tbody>
+                    </table>
+                  </ScrollableTable>
+                )}
+              </section>
             )}
           </>
         )}

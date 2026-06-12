@@ -9,7 +9,8 @@ import EarlyAccessForm from './components/EarlyAccessForm'
 import Footer from './components/Footer'
 
 function App() {
-  const [showForm, setShowForm] = useState(false)
+  const referralSource = new URLSearchParams(window.location.search).get('ref') || ''
+  const [showForm, setShowForm] = useState(() => Boolean(referralSource))
   const openForm  = () => setShowForm(true)
   const closeForm = () => setShowForm(false)
 
@@ -38,7 +39,7 @@ function App() {
 
       <Footer />
 
-      {showForm && <EarlyAccessForm onClose={closeForm} />}
+      {showForm && <EarlyAccessForm onClose={closeForm} referralSource={referralSource} />}
     </div>
   )
 }

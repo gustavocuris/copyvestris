@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 
 interface Props {
   onClose: () => void
+  referralSource?: string
 }
 
 const PROFESSIONAL_TYPES = [
@@ -43,7 +44,7 @@ interface Errors {
   professionalType?: string
 }
 
-const EarlyAccessForm = ({ onClose }: Props) => {
+const EarlyAccessForm = ({ onClose, referralSource = '' }: Props) => {
   const [form, setForm] = useState<FormData>({
     name: '',
     whatsapp: '',
@@ -79,7 +80,8 @@ const EarlyAccessForm = ({ onClose }: Props) => {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    let { name, value } = e.target
+    const { name } = e.target
+    let { value } = e.target
     if (name === 'whatsapp') {
       const digits = value.replace(/\D/g, '').slice(0, 11)
       if (digits.length <= 2) value = digits.length ? `(${digits}` : ''
@@ -98,20 +100,45 @@ const EarlyAccessForm = ({ onClose }: Props) => {
     if (!validate()) return
 
     setLoading(true)
-    const { error } = await supabase.from('registrations').insert({
-      name: form.name.trim(),
-      whatsapp: form.whatsapp.trim(),
-      email: form.email.trim(),
-      professional_type: form.professionalType,
-      clinic_name: showClinicField ? form.clinicName.trim() || null : null,
-      city: form.city.trim() || null,
-      interest: form.interest || null,
-    })
-    setLoading(false)
-    if (!error) {
-      setSubmitted(true)
-    } else {
+    const registration = {
+      p_name: form.name.trim(),
+      p_whatsapp: form.whatsapp.trim(),
+      p_email: form.email.trim(),
+      p_professional_type: form.professionalType,
+      p_clinic_name: showClinicField ? form.clinicName.trim() || null : null,
+      p_city: form.city.trim() || null,
+      p_interest: form.interest || null,
+      p_referral_source: referralSource || null,
+    }
+    const { data, error } = await supabase.rpc('register_early_access', registration)
+
+    // Keep the original VESTRIS form available while the additive migration is deployed.
+    if (error?.code === 'PGRST202' && !referralSource) {
+      const { error: fallbackError } = await supabase.from('registrations').insert({
+        name: registration.p_name,
+        whatsapp: registration.p_whatsapp,
+        email: registration.p_email,
+        professional_type: registration.p_professional_type,
+        clinic_name: registration.p_clinic_name,
+        city: registration.p_city,
+        interest: registration.p_interest,
+      })
+      setLoading(false)
+      if (!fallbackError) {
+        setSubmitted(true)
+        return
+      }
       alert('Erro ao salvar cadastro. Tente novamente.')
+      return
+    }
+
+    setLoading(false)
+    if (!error && data === true) {
+      setSubmitted(true)
+    } else if (!error && data === false) {
+      alert('Este link de parceiro não está ativo. Solicite um novo link.')
+    } else {
+      alert('Erro ao salvar cadastro. Verifique a configuração do banco de dados.')
     }
   }
 

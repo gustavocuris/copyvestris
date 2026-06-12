@@ -8,4 +8,6 @@ export interface Registration {
   city?: string;
   interest?: string;
   createdAt: string;
+  createdAtRaw: string;
+  referralSource?: string;
 }
