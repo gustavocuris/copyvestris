@@ -60,7 +60,7 @@ create or replace function public.get_access_dashboard(p_password text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_account public.access_accounts%rowtype;
@@ -136,7 +136,7 @@ create or replace function public.admin_save_partner(
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_admin_id uuid;
@@ -191,7 +191,7 @@ create or replace function public.admin_toggle_partner(
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_admin_id uuid;
@@ -229,7 +229,7 @@ create or replace function public.register_early_access(
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_source text;
