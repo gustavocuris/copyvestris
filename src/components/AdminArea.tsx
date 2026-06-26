@@ -108,6 +108,7 @@ const ScrollableTable = ({ children }: { children: React.ReactNode }) => {
 
 const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
   const [passwordError, setPasswordError] = useState('')
   const [registrations, setRegistrations] = useState<Registration[]>([])
@@ -356,18 +357,28 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
           <div className="admin-login-shell">
             <form onSubmit={handleAuth} className="password-form">
               <label htmlFor="admin-password">Senha de acesso</label>
-              <input
-                id="admin-password"
-                type="password"
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value)
-                  setPasswordError('')
-                }}
-                placeholder="••••••••••"
-                autoFocus
-                autoComplete="current-password"
-              />
+              <div className="password-input-wrap">
+                <input
+                  id="admin-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value)
+                    setPasswordError('')
+                  }}
+                  placeholder="••••••••••"
+                  autoFocus
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? 'Ocultar' : 'Ver'}
+                </button>
+              </div>
               {passwordError && <p className="password-error">{passwordError}</p>}
               <button type="submit" className="btn-green">Entrar</button>
             </form>
