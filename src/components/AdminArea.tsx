@@ -59,6 +59,11 @@ const startOfDay = (date: Date) => {
   return result
 }
 
+const displayCell = (value: string | number | undefined | null) => {
+  if (value === undefined || value === null || value === '') return '—'
+  return String(value)
+}
+
 const ScrollableTable = ({ children }: { children: React.ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef({ active: false, startX: 0, scrollLeft: 0 })
@@ -123,6 +128,30 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const [partnerMessage, setPartnerMessage] = useState('')
   const [savingPartner, setSavingPartner] = useState(false)
   const [databaseConfigured, setDatabaseConfigured] = useState(true)
+  const [copiedCell, setCopiedCell] = useState('')
+
+  const copyTableCell = async (value: string | number | undefined | null) => {
+    const text = displayCell(value)
+    if (text === '—') return
+    await navigator.clipboard.writeText(text)
+    setCopiedCell(text)
+    window.setTimeout(() => setCopiedCell(''), 1200)
+  }
+
+  const copiedTitle = copiedCell ? `Copiado: ${copiedCell}` : 'Clique duas vezes para copiar'
+
+  const copyableCell = (value: string | number | undefined | null) => {
+    const text = displayCell(value)
+    return (
+      <td
+        className={`copyable-cell${copiedCell === text ? ' copied' : ''}`}
+        onDoubleClick={() => copyTableCell(value)}
+        title={text === '—' ? undefined : copiedTitle}
+      >
+        {text}
+      </td>
+    )
+  }
 
   const applyPayload = (payload: AccessPayload) => {
     const accessAccount: AccessAccount = payload.account?.role === 'partner' ? 'partner' : 'admin'
@@ -491,9 +520,17 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                       <tbody>
                         {displayedRegistrations.map((registration, index) => (
                           <tr key={registration.id}>
-                            <td>{index + 1}</td><td>{registration.name}</td><td>{registration.whatsapp}</td><td>{registration.email}</td><td>{registration.professionalType}</td><td>{registration.clinicName || '—'}</td><td>{registration.city || '—'}</td><td>{registration.interest || '—'}</td>
-                            <td>{partners.find((item) => item.referralSource === registration.referralSource)?.displayName || 'VESTRIS'}</td>
-                            <td>{registration.createdAt}</td><td><button className="btn-delete-row" onClick={() => handleDelete(registration.id)} title="Excluir">×</button></td>
+                            {copyableCell(index + 1)}
+                            {copyableCell(registration.name)}
+                            {copyableCell(registration.whatsapp)}
+                            {copyableCell(registration.email)}
+                            {copyableCell(registration.professionalType)}
+                            {copyableCell(registration.clinicName)}
+                            {copyableCell(registration.city)}
+                            {copyableCell(registration.interest)}
+                            {copyableCell(partners.find((item) => item.referralSource === registration.referralSource)?.displayName || 'VESTRIS')}
+                            {copyableCell(registration.createdAt)}
+                            <td><button className="btn-delete-row" onClick={() => handleDelete(registration.id)} title="Excluir">×</button></td>
                           </tr>
                         ))}
                       </tbody>
@@ -510,7 +547,20 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                   <ScrollableTable>
                     <table className="admin-table">
                       <thead><tr><th>#</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Tipo</th><th>Cidade</th><th>Interesse</th><th>Cadastro</th></tr></thead>
-                      <tbody>{registrations.map((registration, index) => <tr key={registration.id}><td>{index + 1}</td><td>{registration.name}</td><td>{registration.whatsapp}</td><td>{registration.email}</td><td>{registration.professionalType}</td><td>{registration.city || '—'}</td><td>{registration.interest || '—'}</td><td>{registration.createdAt}</td></tr>)}</tbody>
+                      <tbody>
+                        {registrations.map((registration, index) => (
+                          <tr key={registration.id}>
+                            {copyableCell(index + 1)}
+                            {copyableCell(registration.name)}
+                            {copyableCell(registration.whatsapp)}
+                            {copyableCell(registration.email)}
+                            {copyableCell(registration.professionalType)}
+                            {copyableCell(registration.city)}
+                            {copyableCell(registration.interest)}
+                            {copyableCell(registration.createdAt)}
+                          </tr>
+                        ))}
+                      </tbody>
                     </table>
                   </ScrollableTable>
                 )}

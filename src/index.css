@@ -855,6 +855,9 @@ body {
   text-transform: uppercase; border-bottom: 1.5px solid rgba(255,255,255,0.12);
 }
 .admin-table td { padding: 10px 13px; border-bottom: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.70); vertical-align: middle; }
+.admin-table td.copyable-cell { cursor: copy; transition: background 0.18s ease, color 0.18s ease; }
+.admin-table td.copyable-cell:hover { color: #fff; background: rgba(139,195,74,0.10); }
+.admin-table td.copyable-cell.copied { color: #d6f2c7; background: rgba(139,195,74,0.18); }
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: rgba(76,175,80,0.06); }
 .empty-state { text-align: center; padding: 3rem; color: rgba(255,255,255,0.55); font-size: 0.92rem; }
