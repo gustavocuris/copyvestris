@@ -1437,6 +1437,43 @@ body {
   font-size: 1.35rem;
   line-height: 1;
 }
+.group-search {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+  margin-bottom: 0.9rem;
+}
+.group-search > span {
+  grid-column: 1 / -1;
+  color: rgba(255,255,255,0.58);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.group-search input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px;
+  outline: none;
+  background: rgba(0,0,0,0.18);
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+}
+.group-search input:focus {
+  border-color: rgba(139,195,74,0.4);
+  box-shadow: 0 0 0 3px rgba(139,195,74,0.10);
+}
+.group-search small {
+  color: #b7df96;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
 .group-contact-list {
   display: grid;
   gap: 0.45rem;
@@ -1792,6 +1829,7 @@ body {
   .group-control-head { flex-direction: column; }
   .group-control-metrics { width: 100%; justify-content: stretch; }
   .group-control-metrics strong { flex: 1; min-width: 0; }
+  .group-search { grid-template-columns: 1fr; }
   .group-message-body { grid-template-columns: 1fr; }
   .group-message-head,
   .group-message-actions { align-items: stretch; }

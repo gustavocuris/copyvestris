@@ -153,6 +153,7 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const [messageAudience, setMessageAudience] = useState<MessageAudience>('pending')
   const [groupMessage, setGroupMessage] = useState('Olá, {nome}! Aqui é da VESTRIS. Tudo bem? Estamos organizando o grupo de acesso antecipado e queremos te enviar o convite.')
   const [messageCursor, setMessageCursor] = useState(0)
+  const [groupSearch, setGroupSearch] = useState('')
   const [groupStatus, setGroupStatus] = useState<Record<string, boolean>>(() => {
     try {
       const saved = window.localStorage.getItem(GROUP_STATUS_STORAGE_KEY)
@@ -294,6 +295,12 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
 
     return [...contacts.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   }, [partners, registrations])
+
+  const filteredGroupContacts = useMemo(() => {
+    const query = groupSearch.trim().toLocaleLowerCase('pt-BR')
+    if (!query) return groupContacts
+    return groupContacts.filter((contact) => contact.name.toLocaleLowerCase('pt-BR').startsWith(query))
+  }, [groupContacts, groupSearch])
 
   const groupTotals = useMemo(() => {
     const inGroup = groupContacts.filter((contact) => groupStatus[contact.key]).length
@@ -731,12 +738,25 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                     </div>
                   </div>
 
+                  <label className="group-search">
+                    <span>Buscar pessoa</span>
+                    <input
+                      type="search"
+                      value={groupSearch}
+                      onChange={(event) => setGroupSearch(event.target.value)}
+                      placeholder="Digite o inicio do nome"
+                    />
+                    <small>{filteredGroupContacts.length} resultado{filteredGroupContacts.length === 1 ? '' : 's'}</small>
+                  </label>
+
                   {groupContacts.length === 0 ? (
                     <div className="empty-state">Nenhum contato disponível para controle do grupo.</div>
+                  ) : filteredGroupContacts.length === 0 ? (
+                    <div className="empty-state">Nenhum contato encontrado para essa busca.</div>
                   ) : (
                     <>
                       <div className="group-contact-list">
-                        {groupContacts.map((contact, index) => {
+                        {filteredGroupContacts.map((contact, index) => {
                           const isChecked = Boolean(groupStatus[contact.key])
                           return (
                             <article className={`group-contact-row${isChecked ? ' checked' : ''}`} key={contact.key}>
