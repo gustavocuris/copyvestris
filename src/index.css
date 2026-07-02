@@ -855,9 +855,31 @@ body {
   text-transform: uppercase; border-bottom: 1.5px solid rgba(255,255,255,0.12);
 }
 .admin-table td { padding: 10px 13px; border-bottom: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.70); vertical-align: middle; }
-.admin-table td.copyable-cell { cursor: copy; transition: background 0.18s ease, color 0.18s ease; }
-.admin-table td.copyable-cell:hover { color: #fff; background: rgba(139,195,74,0.10); }
-.admin-table td.copyable-cell.copied { color: #d6f2c7; background: rgba(139,195,74,0.18); }
+.copyable-field {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: copy;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.copyable-field:hover {
+  border-color: rgba(139,195,74,0.22);
+  background: rgba(139,195,74,0.10);
+  color: #fff;
+}
+.copyable-field.copied {
+  border-color: rgba(139,195,74,0.36);
+  background: rgba(139,195,74,0.18);
+  color: #d6f2c7;
+}
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: rgba(76,175,80,0.06); }
 .empty-state { text-align: center; padding: 3rem; color: rgba(255,255,255,0.55); font-size: 0.92rem; }
@@ -1364,6 +1386,300 @@ body {
   background: rgba(239,154,154,0.10);
   color: #efb0b0;
 }
+.group-control-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 8px;
+  background: rgba(13, 61, 29, 0.72);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  backdrop-filter: blur(12px);
+}
+.group-control-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+.group-control-head span {
+  display: block;
+  color: rgba(255,255,255,0.58);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.group-control-head h3 {
+  color: #fff;
+  font-size: 1rem;
+}
+.group-control-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+.group-control-metrics strong {
+  min-width: 92px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(139,195,74,0.16);
+  border-radius: 6px;
+  background: rgba(139,195,74,0.08);
+  color: rgba(255,255,255,0.66);
+  font-size: 0.68rem;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.group-control-metrics b {
+  display: block;
+  color: #b7df96;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.group-contact-list {
+  display: grid;
+  gap: 0.45rem;
+}
+.group-message-panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1.15rem;
+  border: 1px solid rgba(139,195,74,0.16);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.14);
+}
+.group-message-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.group-message-head span {
+  display: block;
+  color: rgba(255,255,255,0.58);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.group-message-head h3 {
+  color: #fff;
+  font-size: 1rem;
+}
+.group-message-head p {
+  color: rgba(255,255,255,0.52);
+  font-size: 0.72rem;
+}
+.group-message-head strong {
+  padding: 0.45rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(139,195,74,0.12);
+  color: #b7df96;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.group-message-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+.group-message-compose {
+  min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.group-message-compose > span {
+  color: rgba(255,255,255,0.58);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.group-message-side {
+  min-width: 0;
+  display: grid;
+  align-content: space-between;
+  gap: 0.75rem;
+}
+.group-message-panel textarea {
+  width: 100%;
+  min-height: 190px;
+  resize: vertical;
+  padding: 0.8rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px;
+  outline: none;
+  background: rgba(0,0,0,0.18);
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.group-message-panel textarea:focus {
+  border-color: rgba(139,195,74,0.4);
+  box-shadow: 0 0 0 3px rgba(139,195,74,0.10);
+}
+.group-message-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+.group-message-options button {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0 0.75rem;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 7px;
+  background: rgba(255,255,255,0.045);
+  color: rgba(255,255,255,0.72);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+.group-message-options button.active {
+  border-color: rgba(139,195,74,0.38);
+  background: rgba(139,195,74,0.14);
+  color: #fff;
+}
+.group-message-options strong {
+  color: #b7df96;
+  font-size: 1.1rem;
+}
+.group-message-actions {
+  display: grid;
+  gap: 1rem;
+}
+.group-message-send {
+  min-height: 42px;
+  padding: 0 1rem;
+  border: 1px solid rgba(139,195,74,0.34);
+  border-radius: 7px;
+  background: rgba(139,195,74,0.16);
+  color: #d1edbf;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+.group-message-send:hover { background: rgba(139,195,74,0.24); }
+.group-message-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.group-message-actions small {
+  color: rgba(255,255,255,0.52);
+  font-size: 0.72rem;
+}
+.group-contact-row {
+  display: grid;
+  grid-template-columns: 42px minmax(230px, 1.15fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) 120px 96px;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 7px;
+  background: rgba(0,0,0,0.12);
+}
+.group-contact-row.checked {
+  border-color: rgba(139,195,74,0.32);
+  background: rgba(139,195,74,0.10);
+}
+.group-contact-number {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.68);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.group-contact-name,
+.group-contact-phone,
+.group-contact-source {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 0.65rem;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.045);
+  color: rgba(255,255,255,0.78);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: copy;
+}
+.group-contact-name:hover,
+.group-contact-phone:hover,
+.group-contact-source:hover {
+  border-color: rgba(139,195,74,0.26);
+  background: rgba(139,195,74,0.10);
+  color: #fff;
+}
+.group-contact-row.checked .group-contact-name {
+  color: #9ee27b;
+}
+.group-whatsapp-btn,
+.group-check-btn {
+  min-height: 38px;
+  padding: 0 0.75rem;
+  border: 1px solid rgba(139,195,74,0.24);
+  border-radius: 6px;
+  background: rgba(139,195,74,0.12);
+  color: #d0edbd;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.group-whatsapp-btn:hover,
+.group-check-btn:hover {
+  background: rgba(139,195,74,0.20);
+}
+.group-whatsapp-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.group-check-btn[aria-pressed="true"] {
+  border-color: rgba(139,195,74,0.42);
+  background: #2f703d;
+  color: #fff;
+}
+.group-check-btn {
+  width: 38px;
+  min-width: 38px;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-color: rgba(255,255,255,0.34);
+  background: transparent;
+}
+.group-check-btn::after {
+  content: '';
+  width: 16px;
+  height: 9px;
+  margin-top: -2px;
+  border-left: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  transform: rotate(-45deg);
+}
+.group-check-btn[aria-pressed="true"]::after {
+  border-color: #fff;
+}
 .admin-mobile-nav { display: none; }
 
 /* ── ANIMATIONS ──────────────────────────── */
@@ -1473,6 +1789,26 @@ body {
     overflow-y: visible;
   }
   .admin-workspace .admin-table { min-width: 920px; }
+  .group-control-head { flex-direction: column; }
+  .group-control-metrics { width: 100%; justify-content: stretch; }
+  .group-control-metrics strong { flex: 1; min-width: 0; }
+  .group-message-body { grid-template-columns: 1fr; }
+  .group-message-head,
+  .group-message-actions { align-items: stretch; }
+  .group-message-options { grid-template-columns: 1fr; }
+  .group-contact-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .group-contact-number { grid-row: span 5; height: 100%; }
+  .group-contact-name,
+  .group-contact-phone,
+  .group-contact-source {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .group-whatsapp-btn,
+  .group-check-btn { width: 100%; }
   .admin-mobile-nav {
     position: fixed;
     right: 0;

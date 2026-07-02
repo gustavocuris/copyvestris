@@ -1,10 +1,12 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Registration } from '../types'
 import { supabase } from '../lib/supabase'
 
 const ADMIN_FALLBACK_PASSWORD = 'vestris2026'
+const GROUP_STATUS_STORAGE_KEY = 'vestris-group-status-v1'
 type AccessAccount = 'admin' | 'partner'
-type AdminView = 'overview' | 'registrations' | 'partners'
+type AdminView = 'overview' | 'registrations' | 'messages' | 'group' | 'partners'
+type MessageAudience = 'all' | 'pending' | 'checked'
 
 interface PartnerAccount {
   id: string
@@ -59,9 +61,28 @@ const startOfDay = (date: Date) => {
   return result
 }
 
+interface GroupContact {
+  key: string
+  name: string
+  whatsapp: string
+  digits: string
+  source: string
+}
+
 const displayCell = (value: string | number | undefined | null) => {
   if (value === undefined || value === null || value === '') return '—'
   return String(value)
+}
+
+const contactKey = (registration: Registration) => {
+  const digits = registration.whatsapp.replace(/\D/g, '')
+  return digits || registration.email.toLowerCase().trim() || registration.name.toLowerCase().trim()
+}
+
+const whatsappDigits = (value: string) => {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  return digits.startsWith('55') ? digits : `55${digits}`
 }
 
 const ScrollableTable = ({ children }: { children: React.ReactNode }) => {
@@ -129,11 +150,37 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const [savingPartner, setSavingPartner] = useState(false)
   const [databaseConfigured, setDatabaseConfigured] = useState(true)
   const [copiedCell, setCopiedCell] = useState('')
+  const [messageAudience, setMessageAudience] = useState<MessageAudience>('pending')
+  const [groupMessage, setGroupMessage] = useState('Olá, {nome}! Aqui é da VESTRIS. Tudo bem? Estamos organizando o grupo de acesso antecipado e queremos te enviar o convite.')
+  const [messageCursor, setMessageCursor] = useState(0)
+  const [groupStatus, setGroupStatus] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = window.localStorage.getItem(GROUP_STATUS_STORAGE_KEY)
+      return saved ? JSON.parse(saved) as Record<string, boolean> : {}
+    } catch {
+      return {}
+    }
+  })
+
+  useEffect(() => {
+    window.localStorage.setItem(GROUP_STATUS_STORAGE_KEY, JSON.stringify(groupStatus))
+  }, [groupStatus])
 
   const copyTableCell = async (value: string | number | undefined | null) => {
     const text = displayCell(value)
     if (text === '—') return
-    await navigator.clipboard.writeText(text)
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
     setCopiedCell(text)
     window.setTimeout(() => setCopiedCell(''), 1200)
   }
@@ -143,12 +190,15 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const copyableCell = (value: string | number | undefined | null) => {
     const text = displayCell(value)
     return (
-      <td
-        className={`copyable-cell${copiedCell === text ? ' copied' : ''}`}
-        onDoubleClick={() => copyTableCell(value)}
-        title={text === '—' ? undefined : copiedTitle}
-      >
-        {text}
+      <td>
+        <button
+          type="button"
+          className={`copyable-field${copiedCell === text ? ' copied' : ''}`}
+          onDoubleClick={() => copyTableCell(value)}
+          title={text === '—' ? undefined : copiedTitle}
+        >
+          {text}
+        </button>
       </td>
     )
   }
@@ -226,6 +276,46 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
     return registrations.filter((item) => item.referralSource === selectedSource)
   }, [account, registrations, selectedSource])
 
+  const groupContacts = useMemo<GroupContact[]>(() => {
+    const contacts = new Map<string, GroupContact>()
+
+    registrations.forEach((registration) => {
+      const key = contactKey(registration)
+      if (!key || contacts.has(key)) return
+      const source = partners.find((item) => item.referralSource === registration.referralSource)?.displayName || 'VESTRIS'
+      contacts.set(key, {
+        key,
+        name: registration.name,
+        whatsapp: registration.whatsapp,
+        digits: whatsappDigits(registration.whatsapp),
+        source,
+      })
+    })
+
+    return [...contacts.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  }, [partners, registrations])
+
+  const groupTotals = useMemo(() => {
+    const inGroup = groupContacts.filter((contact) => groupStatus[contact.key]).length
+    return {
+      total: groupContacts.length,
+      inGroup,
+      pending: groupContacts.length - inGroup,
+    }
+  }, [groupContacts, groupStatus])
+
+  const messageAudienceOptions = useMemo(() => [
+    { value: 'all' as const, label: 'Todos', count: groupTotals.total },
+    { value: 'pending' as const, label: 'Todos que ainda nao entraram', count: groupTotals.pending },
+    { value: 'checked' as const, label: 'Todos que estao no grupo', count: groupTotals.inGroup },
+  ], [groupTotals])
+
+  const selectedMessageContacts = useMemo(() => {
+    if (messageAudience === 'pending') return groupContacts.filter((contact) => !groupStatus[contact.key])
+    if (messageAudience === 'checked') return groupContacts.filter((contact) => groupStatus[contact.key])
+    return groupContacts
+  }, [groupContacts, groupStatus, messageAudience])
+
   const metrics = useMemo(() => {
     const today = startOfDay(new Date())
     const sevenDaysAgo = new Date(today)
@@ -285,6 +375,31 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
     window.setTimeout(() => {
       document.getElementById('access-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 80)
+  }
+
+  const toggleGroupStatus = (key: string) => {
+    setGroupStatus((current) => ({ ...current, [key]: !current[key] }))
+  }
+
+  const openWhatsApp = (contact: GroupContact) => {
+    if (!contact.digits) return
+    const message = encodeURIComponent(`Olá, ${contact.name}! Aqui é da VESTRIS. Tudo bem?`)
+    window.open(`https://wa.me/${contact.digits}?text=${message}`, '_blank', 'noopener,noreferrer')
+  }
+
+  const buildGroupMessage = (contact: GroupContact) => groupMessage
+    .replace(/\{nome\}/gi, contact.name)
+    .replace(/\{telefone\}/gi, contact.whatsapp)
+    .replace(/\{origem\}/gi, contact.source)
+
+  const openNextSelectedMessage = () => {
+    const contacts = selectedMessageContacts.filter((contact) => contact.digits)
+    if (!contacts.length) return
+    const currentIndex = messageCursor % contacts.length
+    const contact = contacts[currentIndex]
+    const message = encodeURIComponent(buildGroupMessage(contact))
+    window.open(`https://wa.me/${contact.digits}?text=${message}`, '_blank', 'noopener,noreferrer')
+    setMessageCursor((current) => (current + 1) % contacts.length)
   }
 
   const changeAdminView = (view: AdminView) => {
@@ -444,6 +559,8 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
               <nav className="admin-tabs" aria-label="Navegação administrativa">
                 <button className={adminView === 'overview' ? 'active' : ''} onClick={() => changeAdminView('overview')}>Visão geral</button>
                 <button className={adminView === 'registrations' ? 'active' : ''} onClick={() => changeAdminView('registrations')}>Cadastros</button>
+                <button className={adminView === 'messages' ? 'active' : ''} onClick={() => changeAdminView('messages')}>Mensagem automática <span>{selectedMessageContacts.length}</span></button>
+                <button className={adminView === 'group' ? 'active' : ''} onClick={() => changeAdminView('group')}>Grupo de acesso antecipado <span>{groupTotals.pending}</span></button>
                 <button className={adminView === 'partners' ? 'active' : ''} onClick={() => changeAdminView('partners')}>Parceiros <span>{partners.length}</span></button>
               </nav>
             )}
@@ -540,6 +657,125 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
               </section>
             )}
 
+            {isAdmin && adminView === 'messages' && (
+              <section className="admin-registration-section message-tab-section" id="access-message-center">
+                <section className="group-message-panel" aria-label="Enviar mensagem para contatos filtrados">
+                  <div className="group-message-head">
+                    <div>
+                      <span>Mensagem automatica</span>
+                      <h3>Enviar convites pelo WhatsApp</h3>
+                      <p>Use {'{nome}'}, {'{telefone}'} ou {'{origem}'} para personalizar.</p>
+                    </div>
+                    <strong>{selectedMessageContacts.length} selecionados</strong>
+                  </div>
+                  <div className="group-message-body">
+                    <label className="group-message-compose">
+                      <span>Mensagem</span>
+                      <textarea
+                        value={groupMessage}
+                        onChange={(event) => setGroupMessage(event.target.value)}
+                        placeholder="Escreva aqui a mensagem que sera enviada pelo WhatsApp..."
+                        rows={6}
+                      />
+                    </label>
+                    <div className="group-message-side">
+                      <div className="group-message-options">
+                        {messageAudienceOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={messageAudience === option.value ? 'active' : ''}
+                            onClick={() => {
+                              setMessageAudience(option.value)
+                              setMessageCursor(0)
+                            }}
+                          >
+                            <span>{option.label}</span>
+                            <strong>{option.count}</strong>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="group-message-actions">
+                        <button
+                          type="button"
+                          className="group-message-send"
+                          onClick={openNextSelectedMessage}
+                          disabled={!selectedMessageContacts.some((contact) => contact.digits) || !groupMessage.trim()}
+                        >
+                          Abrir proximo no WhatsApp
+                        </button>
+                        <small>
+                          {selectedMessageContacts.length
+                            ? `Contato ${Math.min(messageCursor + 1, selectedMessageContacts.length)} de ${selectedMessageContacts.length}`
+                            : 'Nenhum contato nessa selecao'}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </section>
+            )}
+
+            {isAdmin && adminView === 'group' && (
+              <section className="admin-registration-section group-tab-section" id="access-group-list">
+                <section className="group-control-panel" aria-label="Controle de entrada no grupo da VESTRIS">
+                  <div className="group-control-head">
+                    <div>
+                      <span>Controle do grupo</span>
+                      <h3>Lista VESTRIS sem duplicados</h3>
+                    </div>
+                    <div className="group-control-metrics">
+                      <strong><b>{groupTotals.total}</b>Total</strong>
+                      <strong><b>{groupTotals.inGroup}</b>No grupo</strong>
+                      <strong><b>{groupTotals.pending}</b>Faltam</strong>
+                    </div>
+                  </div>
+
+                  {groupContacts.length === 0 ? (
+                    <div className="empty-state">Nenhum contato disponível para controle do grupo.</div>
+                  ) : (
+                    <>
+                      <div className="group-contact-list">
+                        {groupContacts.map((contact, index) => {
+                          const isChecked = Boolean(groupStatus[contact.key])
+                          return (
+                            <article className={`group-contact-row${isChecked ? ' checked' : ''}`} key={contact.key}>
+                              <span className="group-contact-number">{index + 1}</span>
+                              <button className="group-contact-name" type="button" onDoubleClick={() => copyTableCell(contact.name)}>
+                                {contact.name}
+                              </button>
+                              <button className="group-contact-phone" type="button" onDoubleClick={() => copyTableCell(contact.whatsapp)}>
+                                {contact.whatsapp}
+                              </button>
+                              <button className="group-contact-source" type="button" onDoubleClick={() => copyTableCell(contact.source)}>
+                                {contact.source}
+                              </button>
+                              <button
+                                className="group-whatsapp-btn"
+                                type="button"
+                                onClick={() => openWhatsApp(contact)}
+                                disabled={!contact.digits}
+                              >
+                                WhatsApp
+                              </button>
+                              <button
+                                className="group-check-btn"
+                                type="button"
+                                onClick={() => toggleGroupStatus(contact.key)}
+                                aria-pressed={isChecked}
+                                aria-label={isChecked ? 'Remover marca de entrada no grupo' : 'Marcar como entrou no grupo'}
+                                title={isChecked ? 'Marcar como fora do grupo' : 'Marcar como entrou no grupo'}
+                              />
+                            </article>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </section>
+              </section>
+            )}
+
             {!isAdmin && (
               <section className="admin-registration-section partner-own-list" id="access-list">
                 <div className="admin-section-heading"><div><span>Seus contatos</span><h3>Lista completa</h3></div><strong>{registrations.length}</strong></div>
@@ -572,6 +808,8 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                 <>
                   <button className={adminView === 'overview' ? 'active' : ''} onClick={() => changeAdminView('overview')}>Início</button>
                   <button className={adminView === 'registrations' ? 'active' : ''} onClick={() => changeAdminView('registrations')}>Cadastros</button>
+                  <button className={adminView === 'messages' ? 'active' : ''} onClick={() => changeAdminView('messages')}>Msg</button>
+                  <button className={adminView === 'group' ? 'active' : ''} onClick={() => changeAdminView('group')}>Grupo</button>
                   <button className={adminView === 'partners' ? 'active' : ''} onClick={() => changeAdminView('partners')}>Parceiros</button>
                 </>
               ) : (
