@@ -153,6 +153,8 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
   const [messageAudience, setMessageAudience] = useState<MessageAudience>('pending')
   const [groupMessage, setGroupMessage] = useState('Olá, {nome}! Aqui é da VESTRIS. Tudo bem? Estamos organizando o grupo de acesso antecipado e queremos te enviar o convite.')
   const [messageCursor, setMessageCursor] = useState(0)
+  const [broadcasting, setBroadcasting] = useState(false)
+  const [broadcastStatus, setBroadcastStatus] = useState('')
   const [groupSearch, setGroupSearch] = useState('')
   const [groupStatus, setGroupStatus] = useState<Record<string, boolean>>(() => {
     try {
@@ -399,14 +401,60 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
     .replace(/\{telefone\}/gi, contact.whatsapp)
     .replace(/\{origem\}/gi, contact.source)
 
+  const openPreparedGroupMessage = (contact: GroupContact) => {
+    if (!contact.digits || !groupMessage.trim()) return
+    const message = encodeURIComponent(buildGroupMessage(contact))
+    window.open(`https://wa.me/${contact.digits}?text=${message}`, '_blank', 'noopener,noreferrer')
+  }
+
   const openNextSelectedMessage = () => {
     const contacts = selectedMessageContacts.filter((contact) => contact.digits)
     if (!contacts.length) return
     const currentIndex = messageCursor % contacts.length
-    const contact = contacts[currentIndex]
-    const message = encodeURIComponent(buildGroupMessage(contact))
-    window.open(`https://wa.me/${contact.digits}?text=${message}`, '_blank', 'noopener,noreferrer')
+    openPreparedGroupMessage(contacts[currentIndex])
     setMessageCursor((current) => (current + 1) % contacts.length)
+  }
+
+  const openAllSelectedMessages = () => {
+    const contacts = selectedMessageContacts.filter((contact) => contact.digits)
+    if (!contacts.length || !groupMessage.trim()) return
+    contacts.forEach((contact) => openPreparedGroupMessage(contact))
+    setMessageCursor(0)
+  }
+
+  const sendBroadcastMessages = async () => {
+    const contacts = selectedMessageContacts.filter((contact) => contact.digits)
+    if (!contacts.length || !groupMessage.trim()) return
+    setBroadcasting(true)
+    setBroadcastStatus(`Enviando para ${contacts.length} contato${contacts.length === 1 ? '' : 's'}...`)
+
+    try {
+      const response = await fetch('/api/whatsapp-broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: groupMessage,
+          contacts: contacts.map((contact) => ({
+            name: contact.name,
+            source: contact.source,
+            digits: contact.digits,
+          })),
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok || !data.ok) {
+        const error = data.error || data.failures?.[0]?.error || 'Nao foi possivel concluir o disparo.'
+        setBroadcastStatus(`${error}${data.sent ? ` Enviadas: ${data.sent}.` : ''}`)
+        return
+      }
+
+      setBroadcastStatus(`Disparo concluido: ${data.sent} mensagem${data.sent === 1 ? '' : 's'} enviada${data.sent === 1 ? '' : 's'}.`)
+    } catch {
+      setBroadcastStatus('Nao foi possivel chamar a API de envio. Verifique o deploy no Vercel.')
+    } finally {
+      setBroadcasting(false)
+    }
   }
 
   const changeAdminView = (view: AdminView) => {
@@ -677,7 +725,10 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                   </div>
                   <div className="group-message-body">
                     <label className="group-message-compose">
-                      <span>Mensagem</span>
+                      <div className="group-message-label">
+                        <span>Mensagem</span>
+                        <small>Texto enviado para cada contato selecionado</small>
+                      </div>
                       <textarea
                         value={groupMessage}
                         onChange={(event) => setGroupMessage(event.target.value)}
@@ -686,36 +737,60 @@ const AdminArea = ({ onClose }: { onClose: () => void }) => {
                       />
                     </label>
                     <div className="group-message-side">
-                      <div className="group-message-options">
-                        {messageAudienceOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            className={messageAudience === option.value ? 'active' : ''}
-                            onClick={() => {
-                              setMessageAudience(option.value)
-                              setMessageCursor(0)
-                            }}
-                          >
-                            <span>{option.label}</span>
-                            <strong>{option.count}</strong>
-                          </button>
-                        ))}
+                      <div className="group-message-card">
+                        <span className="group-message-card-title">Publico do disparo</span>
+                        <div className="group-message-options">
+                          {messageAudienceOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={messageAudience === option.value ? 'active' : ''}
+                              onClick={() => {
+                                setMessageAudience(option.value)
+                                setMessageCursor(0)
+                              }}
+                            >
+                              <span>{option.label}</span>
+                              <strong>{option.count}</strong>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="group-message-actions">
-                        <button
-                          type="button"
-                          className="group-message-send"
-                          onClick={openNextSelectedMessage}
-                          disabled={!selectedMessageContacts.some((contact) => contact.digits) || !groupMessage.trim()}
-                        >
-                          Abrir proximo no WhatsApp
-                        </button>
-                        <small>
-                          {selectedMessageContacts.length
-                            ? `Contato ${Math.min(messageCursor + 1, selectedMessageContacts.length)} de ${selectedMessageContacts.length}`
-                            : 'Nenhum contato nessa selecao'}
-                        </small>
+                      <div className="group-message-card">
+                        <span className="group-message-card-title">Envio</span>
+                        <div className="group-message-actions">
+                          <button
+                            type="button"
+                            className="group-message-send"
+                            onClick={sendBroadcastMessages}
+                            disabled={broadcasting || !selectedMessageContacts.some((contact) => contact.digits) || !groupMessage.trim()}
+                          >
+                            {broadcasting ? 'Enviando...' : 'Enviar direto para todos'}
+                          </button>
+                          <button
+                            type="button"
+                            className="group-message-send secondary"
+                            onClick={openAllSelectedMessages}
+                            disabled={broadcasting || !selectedMessageContacts.some((contact) => contact.digits) || !groupMessage.trim()}
+                          >
+                            Abrir todos no WhatsApp
+                          </button>
+                          <button
+                            type="button"
+                            className="group-message-send secondary"
+                            onClick={openNextSelectedMessage}
+                            disabled={broadcasting || !selectedMessageContacts.some((contact) => contact.digits) || !groupMessage.trim()}
+                          >
+                            Abrir proximo no WhatsApp
+                          </button>
+                          {broadcastStatus && <small className="broadcast-status">{broadcastStatus}</small>}
+                          <small>O envio direto usa a API oficial configurada no Vercel. Os botoes do WhatsApp ficam como plano B.</small>
+                          <small>
+                            {selectedMessageContacts.length
+                              ? `Contato ${Math.min(messageCursor + 1, selectedMessageContacts.length)} de ${selectedMessageContacts.length}`
+                              : 'Nenhum contato nessa selecao'}
+                          </small>
+                        </div>
                       </div>
                     </div>
                   </div>

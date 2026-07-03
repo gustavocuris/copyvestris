@@ -1480,12 +1480,15 @@ body {
 }
 .group-message-panel {
   display: grid;
-  gap: 0.75rem;
+  gap: 1rem;
   margin-bottom: 1rem;
-  padding: 1.15rem;
-  border: 1px solid rgba(139,195,74,0.16);
+  padding: 1.35rem;
+  border: 1px solid rgba(139,195,74,0.24);
   border-radius: 8px;
-  background: rgba(0,0,0,0.14);
+  background:
+    linear-gradient(145deg, rgba(15,76,38,0.58), rgba(1,36,18,0.72)),
+    rgba(0,0,0,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 .group-message-head {
   display: flex;
@@ -1503,53 +1506,73 @@ body {
 }
 .group-message-head h3 {
   color: #fff;
-  font-size: 1rem;
+  font-size: 1.05rem;
+  line-height: 1.2;
 }
 .group-message-head p {
   color: rgba(255,255,255,0.52);
   font-size: 0.72rem;
+  margin-top: 0.2rem;
 }
 .group-message-head strong {
-  padding: 0.45rem 0.65rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 999px;
-  background: rgba(139,195,74,0.12);
+  border: 1px solid rgba(139,195,74,0.18);
+  background: rgba(139,195,74,0.16);
   color: #b7df96;
   font-size: 0.72rem;
   white-space: nowrap;
 }
 .group-message-body {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.62fr);
   gap: 1rem;
   align-items: stretch;
 }
 .group-message-compose {
   min-width: 0;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.14);
 }
-.group-message-compose > span {
+.group-message-label {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.group-message-label span,
+.group-message-card-title {
+  display: block;
   color: rgba(255,255,255,0.58);
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.8px;
   text-transform: uppercase;
 }
+.group-message-label small {
+  color: rgba(255,255,255,0.42);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: right;
+}
 .group-message-side {
   min-width: 0;
   display: grid;
-  align-content: space-between;
   gap: 0.75rem;
 }
 .group-message-panel textarea {
   width: 100%;
-  min-height: 190px;
+  min-height: 255px;
   resize: vertical;
-  padding: 0.8rem;
+  padding: 0.95rem;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 7px;
   outline: none;
-  background: rgba(0,0,0,0.18);
+  background: rgba(0,0,0,0.22);
   color: #fff;
   font: inherit;
   font-size: 0.82rem;
@@ -1559,18 +1582,26 @@ body {
   border-color: rgba(139,195,74,0.4);
   box-shadow: 0 0 0 3px rgba(139,195,74,0.10);
 }
+.group-message-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.14);
+}
 .group-message-options {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.55rem;
 }
 .group-message-options button {
-  min-height: 54px;
+  min-height: 58px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
-  padding: 0 0.75rem;
+  padding: 0 0.85rem;
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 7px;
   background: rgba(255,255,255,0.045);
@@ -1583,30 +1614,39 @@ body {
 }
 .group-message-options button.active {
   border-color: rgba(139,195,74,0.38);
-  background: rgba(139,195,74,0.14);
+  background: linear-gradient(135deg, rgba(139,195,74,0.18), rgba(43,100,45,0.18));
   color: #fff;
+  box-shadow: inset 3px 0 0 rgba(139,195,74,0.7);
 }
 .group-message-options strong {
   color: #b7df96;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
 }
 .group-message-actions {
   display: grid;
-  gap: 1rem;
+  gap: 0.6rem;
 }
 .group-message-send {
-  min-height: 42px;
+  min-height: 46px;
   padding: 0 1rem;
   border: 1px solid rgba(139,195,74,0.34);
   border-radius: 7px;
-  background: rgba(139,195,74,0.16);
-  color: #d1edbf;
+  background: linear-gradient(135deg, rgba(139,195,74,0.28), rgba(43,100,45,0.26));
+  color: #f1ffe9;
   font: inherit;
   font-size: 0.76rem;
   font-weight: 900;
   cursor: pointer;
 }
 .group-message-send:hover { background: rgba(139,195,74,0.24); }
+.group-message-send.secondary {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.78);
+}
+.group-message-send.secondary:hover {
+  background: rgba(255,255,255,0.1);
+}
 .group-message-send:disabled {
   opacity: 0.45;
   cursor: default;
@@ -1614,6 +1654,14 @@ body {
 .group-message-actions small {
   color: rgba(255,255,255,0.52);
   font-size: 0.72rem;
+}
+.group-message-actions .broadcast-status {
+  color: #b7df96;
+  font-weight: 800;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(139,195,74,0.18);
+  border-radius: 7px;
+  background: rgba(139,195,74,0.08);
 }
 .group-contact-row {
   display: grid;
@@ -1796,26 +1844,60 @@ body {
   .modal { padding: 1.8rem 1.1rem; }
   .admin-page-header,
   .partner-create-head { flex-direction: column; padding-right: 2rem; }
-  .admin-tabs { overflow-x: auto; }
-  .admin-tabs button { white-space: nowrap; }
+  .admin-workspace .admin-tabs { display: none; }
   .partner-create-fields,
   .partner-account-grid { grid-template-columns: 1fr; }
   .partner-create-fields label:first-child { grid-column: auto; }
-  .partner-create-head .btn-green { width: 100%; }
-  .partner-account-actions button { flex-basis: calc(50% - 0.4rem); }
+  .partner-create-head .btn-green,
+  .partner-account-actions button { width: 100%; flex-basis: 100%; }
   .admin-workspace {
-    padding: 1.2rem 0.8rem calc(5.25rem + env(safe-area-inset-bottom));
+    width: 100vw;
+    max-width: none;
+    min-height: 100dvh;
+    padding: 1rem 0.7rem calc(5.75rem + env(safe-area-inset-bottom));
     scroll-padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+    border-radius: 0;
   }
-  .admin-header-actions { width: 100%; }
-  .admin-header-actions button { flex: 1; }
-  .admin-metrics { gap: 0.55rem; }
-  .admin-metric { min-height: 112px; padding: 0.85rem; }
-  .admin-metric strong { font-size: 1.85rem; }
+  .admin-workspace .modal-close {
+    top: 0.85rem;
+    right: 0.85rem;
+  }
+  .admin-page-header {
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+  .admin-workspace .admin-page-header h2 {
+    font-size: clamp(1.35rem, 8vw, 1.8rem);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+  .admin-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-header-actions button {
+    min-width: 0;
+    min-height: 42px;
+    padding-inline: 0.65rem;
+  }
+  .admin-header-actions .btn-danger { grid-column: 1 / -1; }
+  .admin-metrics {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
+  }
+  .admin-metric { min-height: 104px; padding: 0.8rem; }
+  .admin-metric span { font-size: 0.62rem; line-height: 1.25; }
+  .admin-metric strong { font-size: 1.75rem; }
+  .admin-metric small { font-size: 0.68rem; }
   .admin-week-chart { height: 160px; gap: 0.3rem; }
   .admin-chart-panel,
   .admin-source-panel,
   .admin-registration-section { padding: 0.8rem; }
+  .admin-section-heading {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
   .partner-share-box { align-items: stretch; flex-direction: column; }
   .partner-share-box strong { white-space: normal; overflow-wrap: anywhere; }
   .admin-list-toolbar { align-items: stretch; flex-direction: column; }
@@ -1826,27 +1908,79 @@ body {
     overflow-y: visible;
   }
   .admin-workspace .admin-table { min-width: 920px; }
-  .group-control-head { flex-direction: column; }
-  .group-control-metrics { width: 100%; justify-content: stretch; }
-  .group-control-metrics strong { flex: 1; min-width: 0; }
+  .group-control-panel,
+  .group-message-panel {
+    padding: 0.75rem;
+  }
+  .group-control-head {
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .group-control-metrics {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .group-control-metrics strong {
+    min-width: 0;
+    padding: 0.55rem 0.45rem;
+    text-align: center;
+  }
+  .group-control-metrics b { font-size: 1.2rem; }
   .group-search { grid-template-columns: 1fr; }
-  .group-message-body { grid-template-columns: 1fr; }
-  .group-message-head,
+  .group-search small { white-space: normal; }
+  .group-message-body {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .group-message-head {
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .group-message-head strong {
+    width: 100%;
+    text-align: center;
+  }
+  .group-message-label {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .group-message-label small { text-align: left; }
+  .group-message-panel textarea { min-height: 180px; }
   .group-message-actions { align-items: stretch; }
   .group-message-options { grid-template-columns: 1fr; }
+  .group-message-options button {
+    min-height: 50px;
+    padding-inline: 0.7rem;
+  }
+  .group-message-send {
+    min-height: 44px;
+    white-space: normal;
+  }
   .group-contact-row {
     grid-template-columns: 36px minmax(0, 1fr);
     align-items: stretch;
+    gap: 0.45rem;
+    padding: 0.5rem;
   }
-  .group-contact-number { grid-row: span 5; height: 100%; }
+  .group-contact-number {
+    grid-row: span 5;
+    width: 32px;
+    height: 100%;
+  }
   .group-contact-name,
   .group-contact-phone,
   .group-contact-source {
+    min-height: 36px;
     white-space: normal;
     overflow-wrap: anywhere;
   }
   .group-whatsapp-btn,
-  .group-check-btn { width: 100%; }
+  .group-check-btn {
+    width: 100%;
+    justify-self: stretch;
+  }
   .admin-mobile-nav {
     position: fixed;
     right: 0;
@@ -1896,5 +2030,61 @@ body {
   .footer-links a {
     flex-basis: 100%; text-align: center;
     font-size: 0.82rem; color: #8BC34A;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-workspace {
+    padding-inline: 0.55rem;
+  }
+  .admin-header-actions {
+    grid-template-columns: 1fr;
+  }
+  .admin-metrics {
+    grid-template-columns: 1fr;
+  }
+  .admin-metric {
+    min-height: 92px;
+  }
+  .admin-list-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .group-control-metrics {
+    grid-template-columns: 1fr;
+  }
+  .group-control-metrics strong {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+  }
+  .group-control-metrics b {
+    margin-right: 0.5rem;
+  }
+  .group-message-panel,
+  .group-control-panel,
+  .admin-registration-section,
+  .admin-chart-panel,
+  .admin-source-panel {
+    padding: 0.65rem;
+  }
+  .group-contact-row {
+    grid-template-columns: 1fr;
+  }
+  .group-contact-number {
+    grid-row: auto;
+    width: 100%;
+    height: 30px;
+  }
+  .admin-mobile-nav {
+    gap: 0.25rem;
+    padding-inline: max(0.45rem, env(safe-area-inset-left));
+  }
+  .admin-mobile-nav button {
+    min-height: 42px;
+    padding-inline: 0.2rem;
+    font-size: 0.62rem;
   }
 }
